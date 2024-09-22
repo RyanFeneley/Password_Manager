@@ -48,9 +48,11 @@ class PasswordManagerApp:
             messagebox.showinfo("Login Successful", "Welcome!")
             user = self.db.get_user_by_username(username)
             self.current_user_id = user[0]
+            self.stored_username = username
             self.show_dashboard()
         else:
             messagebox.showerror("Login Failed", "Invalid credentials.")
+
 
     def show_dashboard(self):
         for widget in self.master.winfo_children():
@@ -104,12 +106,26 @@ class PasswordManagerApp:
         if self.current_user_id:
             passwords = self.db.get_passwords(self.current_user_id)
             if passwords:
-                password_list = "\n".join([f"Service: {entry[1]}, Username: {entry[2]}, Password: {entry[3]}" for entry in passwords])
+                password_list = "\n".join([f"Service: {entry[1]}, Username: {entry[2]}" for entry in passwords])
+                self.passwords_to_reveal = {entry[1]: entry[3] for entry in passwords}  # Store passwords for later use
                 messagebox.showinfo("Stored Passwords", password_list)
+                self.ask_reveal_password()  # Prompt to reveal passwords
             else:
                 messagebox.showinfo("Stored Passwords", "No passwords stored.")
         else:
             messagebox.showerror("Error", "Please log in to view passwords.")
+
+    def ask_reveal_password(self):
+        service_name = simpledialog.askstring("Reveal Password", "Enter the service name to reveal the password:")
+        if service_name in self.passwords_to_reveal:
+            master_password = simpledialog.askstring("Master Password", "Enter your master password:", show="*")
+            if self.db.authenticate_user(self.stored_username, master_password):  # Use stored username
+                messagebox.showinfo("Password Revealed", f"Password for {service_name}: {self.passwords_to_reveal[service_name]}")
+            else:
+                messagebox.showerror("Error", "Invalid master password.")
+        else:
+            messagebox.showerror("Error", "Service not found.")
+
 
 
     def add_password(self):
