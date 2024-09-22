@@ -1,7 +1,7 @@
 """
 db.py
-Ryan Feneley
-September 2024
+Author: Ryan Feneley
+Date: September 2024
 """
 
 import sqlite3
