@@ -47,7 +47,8 @@ def initialize_db():
         user_id INTEGER NOT NULL,
         service_name TEXT NOT NULL,
         service_username TEXT NOT NULL,
-        encrypted_password TEXT NOT NULL,
+        hashed_password TEXT NOT NULL, -- Store the hashed password
+        encrypted_password TEXT NOT NULL, -- Store the encrypted password
         notes TEXT,
         FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
     );
@@ -66,10 +67,10 @@ def initialize_db():
 class Database:
     """Database class to manage user and password operations."""
     
-    def __init__(self, db_path=DATABASE_PATH, key_path="encryption_key.key"):
+    def __init__(self, db_path=DATABASE_PATH):
         self.db_path = db_path
-        self.key = load_key(os.path.join(os.path.dirname(__file__), key_path)) 
         initialize_db()
+        self.encryption_key = load_key("encryption_key.key")
 
     def add_user(self, username, password_hash, email=None):
         """Adds a new user to the users table."""
@@ -120,24 +121,33 @@ class Database:
                 try:
                     cursor = conn.cursor()
                     cursor.execute(select_passwords_sql, (user_id,))
-                    return cursor.fetchall()
+                    passwords = cursor.fetchall()
+                    # Decrypt
+                    decrypted_passwords = []
+                    for entry in passwords:
+                        decrypted_entry = list(entry)
+                        decrypted_entry[3] = decrypt_password(entry[3].encode('utf-8'), self.encryption_key)
+                        decrypted_passwords.append(tuple(decrypted_entry))
+                    return decrypted_passwords
                 except Error as e:
                     print(f"Error retrieving passwords: {e}")
         return []
 
+
     def add_password(self, user_id, service_name, service_username, password, notes=None):
         """Adds a new password entry for a user."""
-        salt = bcrypt.gensalt()
-        encrypted_password = bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        encrypted_password = encrypt_password(password, self.encryption_key).decode('utf-8')
+        
         insert_password_sql = """
-        INSERT INTO passwords (user_id, service_name, service_username, encrypted_password, notes)
-        VALUES (?, ?, ?, ?, ?);
+        INSERT INTO passwords (user_id, service_name, service_username, hashed_password, encrypted_password, notes)
+        VALUES (?, ?, ?, ?, ?, ?);
         """
         with get_db_connection() as conn:
             if conn:
                 try:
                     cursor = conn.cursor()
-                    cursor.execute(insert_password_sql, (user_id, service_name, service_username, encrypted_password, notes))
+                    cursor.execute(insert_password_sql, (user_id, service_name, service_username, hashed_password, encrypted_password, notes))
                     conn.commit()
                     print(f"Password for '{service_name}' added successfully.")
                     return True
@@ -154,7 +164,7 @@ class Database:
                     cursor = conn.cursor()
                     cursor.execute(delete_password_sql, (user_id, service_name))
                     conn.commit()
-                    return cursor.rowcount > 0  # Returns True if a row was deleted
+                    return cursor.rowcount > 0 
                 except Error as e:
                     print(f"Error removing password: {e}")
         return False
