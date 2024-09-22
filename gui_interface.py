@@ -1,4 +1,3 @@
-# gui_interface.py
 """
 gui_interface.py
 Author: Ryan Feneley
@@ -6,6 +5,7 @@ Date: September 2024
 """
 
 import tkinter as tk
+import bcrypt
 from tkinter import messagebox, simpledialog
 from db import Database
 from password_generator import generate_password
@@ -15,6 +15,7 @@ class PasswordManagerApp:
         self.master = master
         self.master.title("Password Manager")
         self.db = Database()  # Adjusted to no longer need a filename
+        self.current_user_id = None  # Store the current user's ID
 
         # Create UI Elements
         self.create_widgets()
@@ -40,19 +41,42 @@ class PasswordManagerApp:
         self.register_button = tk.Button(self.master, text="Register", command=self.register)
         self.register_button.pack(pady=5)
 
-        self.generate_button = tk.Button(self.master, text="Generate Password", command=self.generate_and_display_password)
-        self.generate_button.pack(pady=5)
-
-        self.view_passwords_button = tk.Button(self.master, text="View Passwords", command=self.view_passwords)
-        self.view_passwords_button.pack(pady=5)
 
     def login(self):
         username = self.username_entry.get()
         password = self.password_entry.get()
         if self.db.authenticate_user(username, password):
             messagebox.showinfo("Login Successful", "Welcome!")
+            user = self.db.get_user_by_username(username)
+            self.current_user_id = user[0]  # Store the current user's ID
+            self.show_dashboard()
         else:
             messagebox.showerror("Login Failed", "Invalid credentials.")
+
+    def show_dashboard(self):
+        for widget in self.master.winfo_children():
+            widget.destroy()
+        dashboard_frame = tk.Frame(self.master)
+        dashboard_frame.pack(pady=10)
+
+        welcome_label = tk.Label(dashboard_frame, text="Welcome to your Password Manager!")
+        welcome_label.pack()
+
+        view_passwords_button = tk.Button(dashboard_frame, text="View Stored Passwords", command=self.view_passwords)
+        view_passwords_button.pack(pady=5)
+
+        generate_button = tk.Button(dashboard_frame, text="Generate Password", command=self.generate_and_display_password)
+        generate_button.pack(pady=5)
+
+        logout_button = tk.Button(dashboard_frame, text="Logout", command=self.logout)
+        logout_button.pack(pady=5)
+
+    def logout(self):
+        # Clear the current frame and show the login again
+        for widget in self.master.winfo_children():
+            widget.destroy()
+        self.current_user_id = None  # Clear current user ID
+        self.create_widgets()  # Recreate the login UI
 
     def register(self):
         username = simpledialog.askstring("Register", "Enter a username:")
@@ -72,14 +96,10 @@ class PasswordManagerApp:
         messagebox.showinfo("Generated Password", f"Your password: {password}")
 
     def view_passwords(self):
-        # Fetch and display stored passwords
-        username = self.username_entry.get()
-        user = self.db.get_user_by_username(username)
-        if user:
-            user_id = user[0]
-            passwords = self.db.get_all_passwords(user_id)
+        if self.current_user_id:  # Check if a user is logged in
+            passwords = self.db.get_passwords(self.current_user_id)
             if passwords:
-                password_list = "\n".join([f"{entry[1]}: {entry[3]}" for entry in passwords])  # Assuming entry[1] is service_name and entry[3] is encrypted_password
+                password_list = "\n".join([f"{entry[2]}: {entry[3]}" for entry in passwords])  # Adjust indices as needed
                 messagebox.showinfo("Stored Passwords", password_list)
             else:
                 messagebox.showinfo("Stored Passwords", "No passwords stored.")
