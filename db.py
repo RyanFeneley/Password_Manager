@@ -8,6 +8,7 @@ from sqlite3 import Error
 import os
 from contextlib import contextmanager
 import bcrypt
+from encryption import load_key, encrypt_password, decrypt_password
 
 # Define the path to the database file
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -65,8 +66,9 @@ def initialize_db():
 class Database:
     """Database class to manage user and password operations."""
     
-    def __init__(self, db_path=DATABASE_PATH):
+    def __init__(self, db_path=DATABASE_PATH, key_path="encryption_key.key"):
         self.db_path = db_path
+        self.key = load_key(os.path.join(os.path.dirname(__file__), key_path)) 
         initialize_db()
 
     def add_user(self, username, password_hash, email=None):
@@ -143,7 +145,6 @@ class Database:
                     print(f"Error adding password: {e}")
         return False
 
-    
     def remove_password(self, user_id, service_name):
         """Removes a password entry for a user."""
         delete_password_sql = "DELETE FROM passwords WHERE user_id = ? AND service_name = ?;"
@@ -157,8 +158,6 @@ class Database:
                 except Error as e:
                     print(f"Error removing password: {e}")
         return False
-
-
 
     def get_all_passwords(self, user_id):
         """Fetches all passwords for the specified user."""

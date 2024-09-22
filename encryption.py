@@ -49,3 +49,10 @@ def decrypt_password(encrypted_password: bytes, key: bytes) -> str:
     fernet = Fernet(key)
     decrypted_password = fernet.decrypt(encrypted_password).decode()
     return decrypted_password
+
+def main():
+    key = generate_key()
+    save_key(key, "encryption_key.key")
+
+if __name__ == "__main__":
+    main()

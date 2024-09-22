@@ -104,12 +104,13 @@ class PasswordManagerApp:
         if self.current_user_id:
             passwords = self.db.get_passwords(self.current_user_id)
             if passwords:
-                password_list = "\n".join([f"{entry[2]}: {entry[3]}" for entry in passwords])
+                password_list = "\n".join([f"Service: {entry[1]}, Username: {entry[2]}, Password: {entry[3]}" for entry in passwords])
                 messagebox.showinfo("Stored Passwords", password_list)
             else:
                 messagebox.showinfo("Stored Passwords", "No passwords stored.")
         else:
             messagebox.showerror("Error", "Please log in to view passwords.")
+
 
     def add_password(self):
         service_name = simpledialog.askstring("Add Password", "Enter the service name:")
@@ -144,6 +145,7 @@ class PasswordManagerApp:
                 messagebox.showwarning("Warning", "No password entered.")
         else:
             messagebox.showwarning("Warning", "No service name entered.")
+
 
 
 def start_gui():
