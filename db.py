@@ -19,7 +19,7 @@ def get_db_connection():
     conn = None
     try:
         conn = sqlite3.connect(DATABASE_PATH)
-        conn.execute("PRAGMA foreign_keys = 1")  # Enable foreign key support
+        conn.execute("PRAGMA foreign_keys = 1")
         yield conn
     except Error as e:
         print(f"Database connection error: {e}")
@@ -40,7 +40,6 @@ def initialize_db():
         two_factor_secret TEXT
     );
     """
-
     create_passwords_table = """
     CREATE TABLE IF NOT EXISTS passwords (
         password_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -52,7 +51,6 @@ def initialize_db():
         FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
     );
     """
-
     with get_db_connection() as conn:
         if conn:
             try:
@@ -67,7 +65,8 @@ def initialize_db():
 class Database:
     """Database class to manage user and password operations."""
     
-    def __init__(self):
+    def __init__(self, db_path=DATABASE_PATH):
+        self.db_path = db_path
         initialize_db()
 
     def add_user(self, username, password_hash, email=None):
@@ -88,7 +87,7 @@ class Database:
         return False
 
     def authenticate_user(self, username, password):
-        """Authenticates a user by verifying  username and pasword."""
+        """Authenticates a user by verifying username and password."""
         user = self.get_user_by_username(username)
         if user and bcrypt.checkpw(password.encode('utf-8'), user[2].encode('utf-8')):
             return True
@@ -142,10 +141,12 @@ class Database:
                     print(f"Error adding password: {e}")
         return False
 
-#Initialization: ***
+    def get_all_passwords(self, user_id):
+        """Fetches all passwords for the specified user."""
+        return self.get_passwords(user_id)
 
+# Initialization for testing purposes
 if __name__ == "__main__":
-    # init and test the database functionality
     db = Database()
     test_username = "testuser"
     test_password = "SecureP@ssw0rd!"
