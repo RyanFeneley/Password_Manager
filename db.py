@@ -123,8 +123,10 @@ class Database:
                     print(f"Error retrieving passwords: {e}")
         return []
 
-    def add_password(self, user_id, service_name, service_username, encrypted_password, notes=None):
+    def add_password(self, user_id, service_name, service_username, password, notes=None):
         """Adds a new password entry for a user."""
+        salt = bcrypt.gensalt()
+        encrypted_password = bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
         insert_password_sql = """
         INSERT INTO passwords (user_id, service_name, service_username, encrypted_password, notes)
         VALUES (?, ?, ?, ?, ?);
@@ -140,6 +142,23 @@ class Database:
                 except Error as e:
                     print(f"Error adding password: {e}")
         return False
+
+    
+    def remove_password(self, user_id, service_name):
+        """Removes a password entry for a user."""
+        delete_password_sql = "DELETE FROM passwords WHERE user_id = ? AND service_name = ?;"
+        with get_db_connection() as conn:
+            if conn:
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute(delete_password_sql, (user_id, service_name))
+                    conn.commit()
+                    return cursor.rowcount > 0  # Returns True if a row was deleted
+                except Error as e:
+                    print(f"Error removing password: {e}")
+        return False
+
+
 
     def get_all_passwords(self, user_id):
         """Fetches all passwords for the specified user."""

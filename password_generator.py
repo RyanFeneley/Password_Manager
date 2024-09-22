@@ -22,17 +22,14 @@ def generate_password(length=12, use_uppercase=True, use_numbers=True, use_speci
     numbers = string.digits if use_numbers else ''
     special = string.punctuation if use_special else ''
 
-    # Combine all character sets
     all_characters = lowercase + uppercase + numbers + special
 
     if not all_characters:
         raise ValueError("At least one character type must be selected.")
 
-    # Generate the password
     password = ''.join(random.choice(all_characters) for _ in range(length))
 
     return password
 
-# Example usage
 if __name__ == "__main__":
     print("Generated Password:", generate_password(length=16))

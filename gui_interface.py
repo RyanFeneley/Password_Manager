@@ -14,8 +14,8 @@ class PasswordManagerApp:
     def __init__(self, master):
         self.master = master
         self.master.title("Password Manager")
-        self.db = Database()  # Adjusted to no longer need a filename
-        self.current_user_id = None  # Store the current user's ID
+        self.db = Database()
+        self.current_user_id = None
 
         # Create UI Elements
         self.create_widgets()
@@ -41,14 +41,13 @@ class PasswordManagerApp:
         self.register_button = tk.Button(self.master, text="Register", command=self.register)
         self.register_button.pack(pady=5)
 
-
     def login(self):
         username = self.username_entry.get()
         password = self.password_entry.get()
         if self.db.authenticate_user(username, password):
             messagebox.showinfo("Login Successful", "Welcome!")
             user = self.db.get_user_by_username(username)
-            self.current_user_id = user[0]  # Store the current user's ID
+            self.current_user_id = user[0]
             self.show_dashboard()
         else:
             messagebox.showerror("Login Failed", "Invalid credentials.")
@@ -68,15 +67,21 @@ class PasswordManagerApp:
         generate_button = tk.Button(dashboard_frame, text="Generate Password", command=self.generate_and_display_password)
         generate_button.pack(pady=5)
 
+        add_password_button = tk.Button(dashboard_frame, text="Add Password", command=self.add_password)
+        add_password_button.pack(pady=5)
+
+        remove_password_button = tk.Button(dashboard_frame, text="Remove Password", command=self.remove_password)
+        remove_password_button.pack(pady=5)
+
+
         logout_button = tk.Button(dashboard_frame, text="Logout", command=self.logout)
         logout_button.pack(pady=5)
 
     def logout(self):
-        # Clear the current frame and show the login again
         for widget in self.master.winfo_children():
             widget.destroy()
-        self.current_user_id = None  # Clear current user ID
-        self.create_widgets()  # Recreate the login UI
+        self.current_user_id = None
+        self.create_widgets()
 
     def register(self):
         username = simpledialog.askstring("Register", "Enter a username:")
@@ -96,15 +101,50 @@ class PasswordManagerApp:
         messagebox.showinfo("Generated Password", f"Your password: {password}")
 
     def view_passwords(self):
-        if self.current_user_id:  # Check if a user is logged in
+        if self.current_user_id:
             passwords = self.db.get_passwords(self.current_user_id)
             if passwords:
-                password_list = "\n".join([f"{entry[2]}: {entry[3]}" for entry in passwords])  # Adjust indices as needed
+                password_list = "\n".join([f"{entry[2]}: {entry[3]}" for entry in passwords])
                 messagebox.showinfo("Stored Passwords", password_list)
             else:
                 messagebox.showinfo("Stored Passwords", "No passwords stored.")
         else:
             messagebox.showerror("Error", "Please log in to view passwords.")
+
+    def add_password(self):
+        service_name = simpledialog.askstring("Add Password", "Enter the service name:")
+        service_username = simpledialog.askstring("Add Password", "Enter the username for the service:")
+        encrypted_password = simpledialog.askstring("Add Password", "Enter the password (or generated password):")
+
+        if service_name and service_username and encrypted_password:
+            if self.db.add_password(self.current_user_id, service_name, service_username, encrypted_password):
+                messagebox.showinfo("Success", "Password added successfully!")
+            else:
+                messagebox.showerror("Error", "Failed to add password.")
+        else:
+            messagebox.showwarning("Input Error", "Please fill in all fields.")
+
+    def remove_password(self):
+        service_name = simpledialog.askstring("Remove Password", "Enter the service name to remove:")
+        if service_name:
+            service_password = simpledialog.askstring("Confirm Removal", f"Enter the password for {service_name} to confirm removal:", show="*")
+            if service_password:
+                # Fetch the password for the service to validate
+                user_passwords = self.db.get_passwords(self.current_user_id)
+                for entry in user_passwords:
+                    if entry[1] == service_name:
+                        if bcrypt.checkpw(service_password.encode('utf-8'), entry[3].encode('utf-8')):
+                            if self.db.remove_password(self.current_user_id, service_name):
+                                messagebox.showinfo("Success", f"Password for {service_name} removed successfully!")
+                            else:
+                                messagebox.showerror("Error", f"Could not remove password for {service_name}.")
+                            return
+                messagebox.showerror("Error", "Service name or password is incorrect.")
+            else:
+                messagebox.showwarning("Warning", "No password entered.")
+        else:
+            messagebox.showwarning("Warning", "No service name entered.")
+
 
 def start_gui():
     root = tk.Tk()
