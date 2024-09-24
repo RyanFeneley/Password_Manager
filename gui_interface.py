@@ -150,7 +150,12 @@ class PasswordManagerApp:
                 user_passwords = self.db.get_passwords(self.current_user_id)
                 for entry in user_passwords:
                     if entry[1] == service_name:
-                        if bcrypt.checkpw(service_password.encode('utf-8'), entry[3].encode('utf-8')):
+                        # Decrypt the stored password to compare with user-provided password
+                        decrypted_password = entry[3]  # Already decrypted in get_passwords()
+
+                        # Check if the provided password matches the decrypted password
+                        if decrypted_password == service_password:
+                            # Proceed with password removal
                             if self.db.remove_password(self.current_user_id, service_name):
                                 messagebox.showinfo("Success", f"Password for {service_name} removed successfully!")
                             else:
@@ -161,6 +166,7 @@ class PasswordManagerApp:
                 messagebox.showwarning("Warning", "No password entered.")
         else:
             messagebox.showwarning("Warning", "No service name entered.")
+
 
 
 

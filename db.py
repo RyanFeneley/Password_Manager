@@ -9,6 +9,8 @@ import os
 from contextlib import contextmanager
 import bcrypt
 from encryption import load_key, encrypt_password, decrypt_password
+from tkinter import messagebox
+
 
 # Define the path to the database file
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -156,15 +158,22 @@ class Database:
         return False
 
     def remove_password(self, user_id, service_name):
-        """Removes a password entry for a user."""
-        delete_password_sql = "DELETE FROM passwords WHERE user_id = ? AND service_name = ?;"
+        """Removes a password entry for a user based on the service name."""
+        delete_password_sql = """
+        DELETE FROM passwords
+        WHERE user_id = ? AND service_name = ?;
+        """
         with get_db_connection() as conn:
             if conn:
                 try:
                     cursor = conn.cursor()
                     cursor.execute(delete_password_sql, (user_id, service_name))
-                    conn.commit()
-                    return cursor.rowcount > 0 
+                    if cursor.rowcount > 0:
+                        conn.commit()
+                        print(f"Password for '{service_name}' removed successfully.")
+                        return True
+                    else:
+                        print(f"No password found for service '{service_name}'.")
                 except Error as e:
                     print(f"Error removing password: {e}")
         return False
